@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased bg-dark-950 text-dark-100;
+  }
+
+  /* Focus visible for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-400;
+  }
+
+  /* Remove default focus styles for mouse users */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-900 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-500 text-white hover:bg-primary-400 focus:ring-primary-400;
+  }
+
+  .btn-secondary {
+    @apply btn border-2 border-primary-400 bg-transparent text-primary-400 hover:bg-primary-400/10 focus:ring-primary-400;
+  }
+
+  .btn-ghost {
+    @apply btn text-dark-300 hover:bg-dark-800 hover:text-dark-100;
+  }
+
+  .card {
+    @apply rounded-2xl bg-dark-800 p-6 shadow-lg shadow-black/20 transition-shadow duration-300 hover:shadow-xl hover:shadow-black/30;
+  }
+
+  .card-hover {
+    @apply card transform transition-all duration-300 hover:-translate-y-1;
+  }
+
+  .input-field {
+    @apply block w-full rounded-lg border border-dark-600 bg-dark-800 px-4 py-3 text-dark-100 placeholder-dark-400 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+  }
+
+  .input-error {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+
+  .label {
+    @apply mb-2 block text-sm font-medium text-dark-200;
+  }
+
+  .error-text {
+    @apply mt-1 text-sm text-red-400;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold tracking-tight text-dark-50 sm:text-4xl;
+  }
+
+  .section-subtitle {
+    @apply mt-4 text-lg text-dark-300;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent;
+  }
+
+  .glass-effect {
+    @apply bg-dark-900/80 backdrop-blur-lg;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+}

@@ -16,6 +16,10 @@ export interface GhostPost {
   tags?: GhostTag[]
   primary_author?: GhostAuthor
   authors?: GhostAuthor[]
+  meta_title?: string
+  meta_description?: string
+  og_image?: string
+  twitter_image?: string
 }
 
 export interface GhostTag {
@@ -26,6 +30,9 @@ export interface GhostTag {
   feature_image?: string | null
   visibility: string
   url: string
+  meta_title?: string
+  meta_description?: string
+  count?: { posts: number }
 }
 
 export interface GhostAuthor {
@@ -35,6 +42,12 @@ export interface GhostAuthor {
   profile_image?: string | null
   bio?: string
   url: string
+  website?: string
+  twitter?: string
+  facebook?: string
+  meta_title?: string
+  meta_description?: string
+  count?: { posts: number }
 }
 
 export interface GhostPagination {

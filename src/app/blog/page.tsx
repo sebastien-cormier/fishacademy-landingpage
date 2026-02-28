@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { ExternalLink } from 'lucide-react'
 import { getFeaturedPosts, getLatestPosts } from '@/lib/ghost'
 import PostCard from '@/components/PostCard'
 import CtaSection from '@/components/CtaSection'
@@ -44,7 +43,7 @@ export default async function BlogPage() {
             itemListElement: latestPosts.slice(0, 10).map((post, index) => ({
               '@type': 'ListItem',
               position: index + 1,
-              url: post.url,
+              url: `/blog/${post.slug}`,
               name: post.title,
             })),
           }),
@@ -58,15 +57,6 @@ export default async function BlogPage() {
           <p className="section-subtitle mx-auto max-w-2xl">
             Conseils, stratégies et actualités pour vos parties de poker entre amis.
           </p>
-          <a
-            href="https://blog.fishacademy.fr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-primary-400 hover:text-primary-300"
-          >
-            Accéder au blog complet
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </a>
         </div>
       </section>
 

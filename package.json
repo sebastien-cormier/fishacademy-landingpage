@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "deploy": "ssh ubuntu@vps02 './update-fishacademy.sh'",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write ."

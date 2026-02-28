@@ -16,6 +16,7 @@ Landing page marketing pour Fish Academy (fishacademy.fr), une plateforme SaaS d
 | React Hook Form | 7.x | Gestion des formulaires |
 | Mailgun.js | 10.x | Envoi d'emails |
 | Ghost Content API | 1.x | Récupération des articles blog |
+| @tailwindcss/typography | 0.x | Rendu du contenu HTML Ghost (prose) |
 
 ## Structure du Projet
 
@@ -24,7 +25,10 @@ src/
 ├── app/                    # App Router (pages et routes)
 │   ├── api/
 │   │   └── contact/        # API Route pour le formulaire
-│   ├── blog/               # Page blog
+│   ├── blog/               # Page listing blog
+│   │   ├── [slug]/         # Page de détail d'un article
+│   │   ├── tag/[slug]/     # Listing par tag
+│   │   └── author/[slug]/  # Listing par auteur
 │   ├── communaute/         # Page communauté (coming soon)
 │   ├── confidentialite/    # Politique de confidentialité
 │   ├── contact/            # Formulaire de contact
@@ -46,6 +50,7 @@ src/
 │   ├── BlogSection.tsx     # Section articles blog
 │   ├── FeaturePostCard.tsx # Carte article mis en avant
 │   ├── PostCard.tsx        # Carte article standard
+│   ├── TagBadge.tsx        # Badge tag (lien interne /blog/tag/)
 │   ├── CtaSection.tsx      # Section call-to-action
 │   ├── FaqAccordion.tsx    # FAQ accordéon
 │   ├── PartnersGrid.tsx    # Grille partenaires
@@ -106,6 +111,8 @@ Palette de couleurs personnalisée :
 | `dark` | Slate - thème sombre (backgrounds, textes) |
 | `poker` | Vert feutrine, or, rouge - thème poker |
 
+Plugin `@tailwindcss/typography` activé pour le rendu du contenu Ghost via `prose prose-invert` dans les pages d'articles.
+
 Classes utilitaires définies dans `globals.css` :
 - `.container-custom` - Container responsive
 - `.section-padding` - Padding sections
@@ -136,17 +143,27 @@ npm run format
 
 ## Docker
 
+L'image est publiée sur **GitHub Container Registry** (`ghcr.io`).
+
+### Authentification GHCR
+
+```bash
+echo $GITHUB_TOKEN | docker login ghcr.io -u sebastien-cormier --password-stdin
+```
+
+Le token GitHub doit avoir le scope `write:packages`.
+
 ### Build et Push
 
 ```bash
-# Script automatisé
+# Script automatisé (build AMD64 + push vers ghcr.io)
 ./build-and-push.sh
 
 # Ou manuellement
 docker build --platform linux/amd64 \
-  -t sebastiencormier/fishacademy-landingpage:latest .
+  -t ghcr.io/sebastien-cormier/fishacademy-landingpage:latest .
 
-docker push sebastiencormier/fishacademy-landingpage:latest
+docker push ghcr.io/sebastien-cormier/fishacademy-landingpage:latest
 ```
 
 ### Exécution
@@ -159,7 +176,7 @@ docker run -p 3000:3000 \
   -e MAILGUN_DOMAIN=fishacademy.fr \
   -e MAILGUN_FROM_EMAIL=postmaster@fishacademy.fr \
   -e CONTACT_EMAIL=contact@fishacademy.fr \
-  sebastiencormier/fishacademy-landingpage:latest
+  ghcr.io/sebastien-cormier/fishacademy-landingpage:latest
 ```
 
 ## API Routes
@@ -197,21 +214,30 @@ Endpoint pour le formulaire de contact.
 
 ## Intégration Ghost
 
+Ghost est utilisé en mode **headless** : il sert uniquement d'outil d'édition, Next.js gère tout le frontend. Les URLs Ghost (`blog.fishacademy.fr`) ne sont jamais exposées aux visiteurs.
+
 Le client Ghost (`src/lib/ghost.ts`) expose :
 
 ```typescript
-// Articles mis en avant
+// Listing
 getFeaturedPosts(limit?: number): Promise<GhostPost[]>
-
-// Derniers articles
 getLatestPosts(limit?: number): Promise<GhostPost[]>
+getPosts(options: { page?: number; limit?: number }): Promise<{ posts; pagination }>
+getPostsByTag(tagSlug, options?): Promise<{ posts; pagination }>
+getPostsByAuthor(authorSlug, options?): Promise<{ posts; pagination }>
 
-// Liste paginée
-getPosts(options: { page?: number; limit?: number }): Promise<{
-  posts: GhostPost[]
-  pagination: GhostPagination
-}>
+// Détail (avec HTML complet)
+getPostBySlug(slug: string): Promise<GhostPost | null>
+getTag(slug: string): Promise<GhostTag | null>
+getAuthor(slug: string): Promise<GhostAuthor | null>
+
+// generateStaticParams
+getAllPostSlugs(): Promise<{ slug: string }[]>
+getAllTagSlugs(): Promise<{ slug: string }[]>
+getAllAuthorSlugs(): Promise<{ slug: string }[]>
 ```
+
+**Rendu du contenu :** `dangerouslySetInnerHTML` + classes `prose prose-invert` (plugin Tailwind Typography).
 
 **Cache :** ISR avec `revalidate: 300` (5 minutes)
 
@@ -232,7 +258,8 @@ Liens vers CustomFlow avec tracking UTM :
 
 - Metadata API Next.js pour chaque page
 - OpenGraph et Twitter Cards
-- JSON-LD sur la homepage
+- `generateMetadata` dynamique sur `/blog/[slug]`, `/blog/tag/[slug]`, `/blog/author/[slug]`
+- JSON-LD sur la homepage et la page blog
 - Sitemap dynamique (`/sitemap.xml`)
 - Robots.txt (`/robots.txt`)
 

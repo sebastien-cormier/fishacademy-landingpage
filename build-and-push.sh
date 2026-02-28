@@ -3,7 +3,9 @@
 set -e
 
 # Configuration
-IMAGE_NAME="sebastiencormier/fishacademy-landingpage"
+GITHUB_USER="sebastien-cormier"
+REPO_NAME="fishacademy-landingpage"
+IMAGE_NAME="ghcr.io/${GITHUB_USER}/${REPO_NAME}"
 PLATFORM="linux/amd64"
 
 # Colors for output
@@ -26,10 +28,10 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check if logged in to Docker Hub
-if ! docker info 2>/dev/null | grep -q "Username"; then
-    echo -e "${YELLOW}Warning: You may not be logged in to Docker Hub.${NC}"
-    echo -e "${YELLOW}Run 'docker login' if push fails.${NC}"
+# Check if logged in to GHCR
+if ! docker info 2>/dev/null | grep -q "ghcr.io"; then
+    echo -e "${YELLOW}Warning: You may not be logged in to GitHub Container Registry.${NC}"
+    echo -e "${YELLOW}Run: echo \$GITHUB_TOKEN | docker login ghcr.io -u ${GITHUB_USER} --password-stdin${NC}"
     echo ""
 fi
 
@@ -71,11 +73,11 @@ echo -e "${GREEN}Build successful!${NC}"
 echo ""
 
 # Ask for confirmation before pushing
-read -p "Push to Docker Hub? (y/N) " -n 1 -r
+read -p "Push to GitHub Container Registry (ghcr.io)? (y/N) " -n 1 -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${GREEN}Pushing to Docker Hub...${NC}"
+    echo -e "${GREEN}Pushing to ghcr.io...${NC}"
 
     # Push both tags
     docker push ${IMAGE_NAME}:${VERSION}
@@ -87,7 +89,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "Image available at:"
-    echo -e "  ${YELLOW}https://hub.docker.com/r/${IMAGE_NAME}${NC}"
+    echo -e "  ${YELLOW}https://github.com/${GITHUB_USER}/${REPO_NAME}/pkgs/container/${REPO_NAME}${NC}"
     echo ""
     echo -e "Pull commands:"
     echo -e "  ${YELLOW}docker pull ${IMAGE_NAME}:${VERSION}${NC}"

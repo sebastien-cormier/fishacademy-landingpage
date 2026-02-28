@@ -77,12 +77,12 @@ export default function CommunautePage() {
               solution complète
             </Link>{' '}
             ou consultez le{' '}
-            <a
+            <Link
               href="/blog"
               className="text-primary-400 hover:underline"
             >
               blog Fish Academy
-            </a>
+            </Link>
             .
           </p>
         </div>

@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async rewrites() {
+    return [
+      { source: '/sitemap-index.xml', destination: '/api/sitemap/index' },
+      { source: '/sitemap-static.xml', destination: '/api/sitemap/static' },
+      { source: '/sitemap-blog.xml', destination: '/api/sitemap/blog' },
+    ]
+  },
   images: {
     remotePatterns: [
       {

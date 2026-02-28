@@ -1,4 +1,5 @@
 import type { GhostPost, GhostPostsResponse, GhostSettings, GhostTag, GhostAuthor, GhostPagination } from '@/types/ghost'
+import { withCache } from '@/lib/redis'
 
 const GHOST_URL = process.env.GHOST_CONTENT_API_URL || 'https://blog.fishacademy.fr'
 const GHOST_KEY = process.env.GHOST_CONTENT_API_KEY || ''
@@ -51,39 +52,43 @@ async function ghostFetch<T>(
  * Get featured posts (posts with featured flag)
  */
 export async function getFeaturedPosts(limit: number = 3): Promise<GhostPost[]> {
-  try {
-    const data = await ghostFetch<GhostPostsResponse>('posts/', {
-      limit,
-      filter: 'featured:true',
-      include: 'tags,authors',
-      fields:
-        'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
-      order: 'published_at desc',
-    })
-    return data.posts || []
-  } catch (error) {
-    console.error('Error fetching featured posts:', error)
-    return []
-  }
+  return withCache(`ghost:featured:${limit}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit,
+        filter: 'featured:true',
+        include: 'tags,authors',
+        fields:
+          'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
+        order: 'published_at desc',
+      })
+      return data.posts || []
+    } catch (error) {
+      console.error('Error fetching featured posts:', error)
+      return []
+    }
+  })
 }
 
 /**
  * Get latest published posts
  */
 export async function getLatestPosts(limit: number = 10): Promise<GhostPost[]> {
-  try {
-    const data = await ghostFetch<GhostPostsResponse>('posts/', {
-      limit,
-      include: 'tags,authors',
-      fields:
-        'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
-      order: 'published_at desc',
-    })
-    return data.posts || []
-  } catch (error) {
-    console.error('Error fetching latest posts:', error)
-    return []
-  }
+  return withCache(`ghost:latest:${limit}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit,
+        include: 'tags,authors',
+        fields:
+          'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
+        order: 'published_at desc',
+      })
+      return data.posts || []
+    } catch (error) {
+      console.error('Error fetching latest posts:', error)
+      return []
+    }
+  })
 }
 
 /**
@@ -94,119 +99,136 @@ export async function getPosts(options: {
   page?: number
   filter?: string
 }): Promise<{ posts: GhostPost[]; pagination: GhostPostsResponse['meta']['pagination'] | null }> {
-  try {
-    const data = await ghostFetch<GhostPostsResponse>('posts/', {
-      limit: options.limit || 10,
-      page: options.page || 1,
-      filter: options.filter,
-      include: 'tags,authors',
-      fields:
-        'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
-      order: 'published_at desc',
-    })
-    return {
-      posts: data.posts || [],
-      pagination: data.meta?.pagination || null,
+  const page = options.page || 1
+  const limit = options.limit || 10
+  const filter = options.filter || ''
+  return withCache(`ghost:posts:${page}:${limit}:${filter}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit,
+        page,
+        filter: options.filter,
+        include: 'tags,authors',
+        fields:
+          'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
+        order: 'published_at desc',
+      })
+      return {
+        posts: data.posts || [],
+        pagination: data.meta?.pagination || null,
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error)
+      return { posts: [], pagination: null }
     }
-  } catch (error) {
-    console.error('Error fetching posts:', error)
-    return { posts: [], pagination: null }
-  }
+  })
 }
 
 /**
  * Get a single post by slug (with full HTML content)
  */
 export async function getPostBySlug(slug: string): Promise<GhostPost | null> {
-  try {
-    const data = await ghostFetch<{ posts: GhostPost[] }>('posts/slug/' + slug + '/', {
-      include: 'tags,authors',
-      formats: 'html',
-    })
-    return data.posts?.[0] || null
-  } catch (error) {
-    console.error('Error fetching post by slug:', error)
-    return null
-  }
+  return withCache(`ghost:post:${slug}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<{ posts: GhostPost[] }>('posts/slug/' + slug + '/', {
+        include: 'tags,authors',
+        formats: 'html',
+      })
+      return data.posts?.[0] || null
+    } catch (error) {
+      console.error('Error fetching post by slug:', error)
+      return null
+    }
+  })
 }
 
 /**
  * Get all post slugs for generateStaticParams
  */
 export async function getAllPostSlugs(): Promise<{ slug: string }[]> {
-  try {
-    const data = await ghostFetch<GhostPostsResponse>('posts/', {
-      limit: 'all' as unknown as number,
-      fields: 'slug',
-    })
-    return (data.posts || []).map((p) => ({ slug: p.slug }))
-  } catch (error) {
-    console.error('Error fetching post slugs:', error)
-    return []
-  }
+  return withCache('ghost:slugs:posts', 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit: 'all' as unknown as number,
+        fields: 'slug',
+      })
+      return (data.posts || []).map((p) => ({ slug: p.slug }))
+    } catch (error) {
+      console.error('Error fetching post slugs:', error)
+      return []
+    }
+  })
 }
 
 /**
  * Get all tag slugs for generateStaticParams
  */
 export async function getAllTagSlugs(): Promise<{ slug: string }[]> {
-  try {
-    const data = await ghostFetch<{ tags: GhostTag[] }>('tags/', {
-      limit: 'all' as unknown as number,
-      fields: 'slug',
-      filter: 'visibility:public',
-    })
-    return (data.tags || []).map((t) => ({ slug: t.slug }))
-  } catch (error) {
-    console.error('Error fetching tag slugs:', error)
-    return []
-  }
+  return withCache('ghost:slugs:tags', 86400, async () => {
+    try {
+      const data = await ghostFetch<{ tags: GhostTag[] }>('tags/', {
+        limit: 'all' as unknown as number,
+        fields: 'slug',
+        filter: 'visibility:public',
+      })
+      return (data.tags || []).map((t) => ({ slug: t.slug }))
+    } catch (error) {
+      console.error('Error fetching tag slugs:', error)
+      return []
+    }
+  })
 }
 
 /**
  * Get all author slugs for generateStaticParams
  */
 export async function getAllAuthorSlugs(): Promise<{ slug: string }[]> {
-  try {
-    const data = await ghostFetch<{ authors: GhostAuthor[] }>('authors/', {
-      limit: 'all' as unknown as number,
-      fields: 'slug',
-    })
-    return (data.authors || []).map((a) => ({ slug: a.slug }))
-  } catch (error) {
-    console.error('Error fetching author slugs:', error)
-    return []
-  }
+  return withCache('ghost:slugs:authors', 86400, async () => {
+    try {
+      const data = await ghostFetch<{ authors: GhostAuthor[] }>('authors/', {
+        limit: 'all' as unknown as number,
+        fields: 'slug',
+      })
+      return (data.authors || []).map((a) => ({ slug: a.slug }))
+    } catch (error) {
+      console.error('Error fetching author slugs:', error)
+      return []
+    }
+  })
 }
 
 /**
  * Get a single tag by slug
  */
 export async function getTag(slug: string): Promise<GhostTag | null> {
-  try {
-    const data = await ghostFetch<{ tags: GhostTag[] }>('tags/slug/' + slug + '/', {
-      include: 'count.posts',
-    })
-    return data.tags?.[0] || null
-  } catch (error) {
-    console.error('Error fetching tag by slug:', error)
-    return null
-  }
+  return withCache(`ghost:tag:${slug}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<{ tags: GhostTag[] }>('tags/slug/' + slug + '/', {
+        include: 'count.posts',
+      })
+      return data.tags?.[0] || null
+    } catch (error) {
+      console.error('Error fetching tag by slug:', error)
+      return null
+    }
+  })
 }
 
 /**
  * Get a single author by slug
  */
 export async function getAuthor(slug: string): Promise<GhostAuthor | null> {
-  try {
-    const data = await ghostFetch<{ authors: GhostAuthor[] }>('authors/slug/' + slug + '/', {
-      include: 'count.posts',
-    })
-    return data.authors?.[0] || null
-  } catch (error) {
-    console.error('Error fetching author by slug:', error)
-    return null
-  }
+  return withCache(`ghost:author:${slug}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<{ authors: GhostAuthor[] }>('authors/slug/' + slug + '/', {
+        include: 'count.posts',
+      })
+      return data.authors?.[0] || null
+    } catch (error) {
+      console.error('Error fetching author by slug:', error)
+      return null
+    }
+  })
 }
 
 /**
@@ -216,24 +238,28 @@ export async function getPostsByTag(
   tagSlug: string,
   options: { page?: number; limit?: number } = {}
 ): Promise<{ posts: GhostPost[]; pagination: GhostPagination | null }> {
-  try {
-    const data = await ghostFetch<GhostPostsResponse>('posts/', {
-      limit: options.limit || 10,
-      page: options.page || 1,
-      filter: `tag:${tagSlug}`,
-      include: 'tags,authors',
-      fields:
-        'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
-      order: 'published_at desc',
-    })
-    return {
-      posts: data.posts || [],
-      pagination: data.meta?.pagination || null,
+  const page = options.page || 1
+  const limit = options.limit || 10
+  return withCache(`ghost:posts:tag:${tagSlug}:${page}:${limit}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit,
+        page,
+        filter: `tag:${tagSlug}`,
+        include: 'tags,authors',
+        fields:
+          'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
+        order: 'published_at desc',
+      })
+      return {
+        posts: data.posts || [],
+        pagination: data.meta?.pagination || null,
+      }
+    } catch (error) {
+      console.error('Error fetching posts by tag:', error)
+      return { posts: [], pagination: null }
     }
-  } catch (error) {
-    console.error('Error fetching posts by tag:', error)
-    return { posts: [], pagination: null }
-  }
+  })
 }
 
 /**
@@ -243,24 +269,49 @@ export async function getPostsByAuthor(
   authorSlug: string,
   options: { page?: number; limit?: number } = {}
 ): Promise<{ posts: GhostPost[]; pagination: GhostPagination | null }> {
-  try {
-    const data = await ghostFetch<GhostPostsResponse>('posts/', {
-      limit: options.limit || 10,
-      page: options.page || 1,
-      filter: `author:${authorSlug}`,
-      include: 'tags,authors',
-      fields:
-        'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
-      order: 'published_at desc',
-    })
-    return {
-      posts: data.posts || [],
-      pagination: data.meta?.pagination || null,
+  const page = options.page || 1
+  const limit = options.limit || 10
+  return withCache(`ghost:posts:author:${authorSlug}:${page}:${limit}`, 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit,
+        page,
+        filter: `author:${authorSlug}`,
+        include: 'tags,authors',
+        fields:
+          'id,uuid,title,slug,excerpt,feature_image,featured,published_at,url,reading_time,primary_tag',
+        order: 'published_at desc',
+      })
+      return {
+        posts: data.posts || [],
+        pagination: data.meta?.pagination || null,
+      }
+    } catch (error) {
+      console.error('Error fetching posts by author:', error)
+      return { posts: [], pagination: null }
     }
-  } catch (error) {
-    console.error('Error fetching posts by author:', error)
-    return { posts: [], pagination: null }
-  }
+  })
+}
+
+/**
+ * Get all posts with slug + last-modified date for sitemap generation
+ */
+export async function getAllPostsForSitemap(): Promise<{ slug: string; updatedAt: string }[]> {
+  return withCache('ghost:sitemap:posts', 86400, async () => {
+    try {
+      const data = await ghostFetch<GhostPostsResponse>('posts/', {
+        limit: 'all' as unknown as number,
+        fields: 'slug,updated_at,published_at',
+      })
+      return (data.posts || []).map((p) => ({
+        slug: p.slug,
+        updatedAt: p.updated_at || p.published_at,
+      }))
+    } catch (error) {
+      console.error('Error fetching posts for sitemap:', error)
+      return []
+    }
+  })
 }
 
 /**

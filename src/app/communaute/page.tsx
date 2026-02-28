@@ -78,9 +78,7 @@ export default function CommunautePage() {
             </Link>{' '}
             ou consultez le{' '}
             <a
-              href="https://blog.fishacademy.fr"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/blog"
               className="text-primary-400 hover:underline"
             >
               blog Fish Academy

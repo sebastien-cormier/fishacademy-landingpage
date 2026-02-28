@@ -59,7 +59,7 @@ export default async function HomePage() {
             url: 'https://fishacademy.fr',
             potentialAction: {
               '@type': 'SearchAction',
-              target: 'https://blog.fishacademy.fr/?s={search_term_string}',
+              target: 'https://fishacademy.fr/blog?s={search_term_string}',
               'query-input': 'required name=search_term_string',
             },
           }),

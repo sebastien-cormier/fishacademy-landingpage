@@ -15,7 +15,7 @@ const footerNavigation = {
     { name: 'Politique de confidentialité', href: '/confidentialite' },
   ],
   external: [
-    { name: 'Blog Fish Academy', href: 'https://blog.fishacademy.fr', external: true },
+    { name: 'Blog Fish Academy', href: '/blog', external: false },
     { name: 'Espace communautaire', href: '/communaute', external: false },
   ],
 }
